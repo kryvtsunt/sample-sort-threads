@@ -1,0 +1,117 @@
+(not CCIS Linux Server)
+Operatig System: CentOS Linux release 7.3.1611;
+Processor model: Intel(R) Xeon(R) CPU X5650  @ 2.67GHz
+Number of cpu cores: 6;
+Amount of RAM: 49279700 kB = 49.3 GB; 
+
+Sample sort program is tested in three scenarious,
+each with a newly generated input of 50 million floats. 
+Timing measurement for each scenario is repeated three times.
+
+The testing of a hw06 program (v1) gives following results: 
+|starting from here v1 = vesion 1 of the hw06 |
+_______________________________________________________________
+ scenario   |1st run(s)|2nd run(s)|3rd run(s)|median(s)|speedup|
+===============================================================
+ 1 thread   |   84.72  |   83.61  |   83.88  |  83.88  |   1   |
+---------------------------------------------------------------
+ 4 threads  |   74.64  |   72.16  |   73.71  |  73.71  |  1.14 | 
+---------------------------------------------------------------
+ 8 threads  |   68.45  |   66.31  |   67.53  |  67.53  |  1.24 |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To make a correct comparison, the hw05 program was tested again:  
+_______________________________________________________________
+ scenario   |1st run(s)|2nd run(s)|3rd run(s)|median(s)|speedup|
+===============================================================
+ 1 process  |   18.92  |   19.07  |   18.78  |  18.92  |   1   | 
+---------------------------------------------------------------
+ 4 processes|   11.29  |   10.23  |   9.58   |  10.23  |  1.84 |
+---------------------------------------------------------------
+ 8 processes|   6.81   |   7.39   |   7.01   |   7.01  |  2.7  |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As we can see, the program from previous hw is much faster.
+Lets try to figure out why this happens. 
+There are two changes we made for v1:
+- changed mappings into I/O syscalls 
+- changed processes into threads
+
+The threads should be faster (or at least the same speed) 
+than processes, as unlike processes, threads have shared memory.
+Therefore, my assumption is that the slow down 
+is caused by changing mapping into I/O syscalls.
+To check this assumtion, we modify hw05 program to have threads
+instead of processes but still have the mappings.
+
+After testing this program we get following results:   
+| hw05 modified |
+_______________________________________________________________
+ scenario   |1st run(s)|2nd run(s)|3rd run(s)|median(s)|speedup|
+===============================================================
+ 1 thread   |   18.29  |   18.08  |  18.22   |   18.22 |   1   | 
+---------------------------------------------------------------
+ 4 threads  |   10.18  |   8.52   |   7.30   |   8.52  |  2.13 |
+---------------------------------------------------------------
+ 8 threads  |   5.19   |   5.05   |   6.04   |   5.19  |  3.51 |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As we can see from the results, our new program is
+even faster than the program with processes.
+
+The only difference between this new program and the v1 
+program is the that the first has mappings, and the second has 
+system calls. It can be infered that our assumption is correct 
+and the reason of the significant slow down of v1 program
+is caused be the system calls. If we look at the hw06 program
+execution, we will see that it takes more time even to get
+to the sort_worker function an display new subarray medians,
+it endorce our claim that syscalls take more time. 
+The research on web, also agrees with out results: 
+a number of resources claim that system calls are indeed slow.
+
+If we look at the speed up we get, it can be seen that it 
+is very small both for 4 and 8 threads. It can be explained 
+by the Amdal's Law. Systems calls 
+influence on the program is more significant than the number
+of parallel threads we use.
+
+There are a lot of system calls in our hw06 program:each thread
+opens/closes the output file, seeks for the correst position 
+and writes into it. 
+(it total n lseek() and n write() calls for all threads).
+We also use a loop in main() to read from the input file.
+(same total number of lseek() and read() to get an input array)  
+
+This large number of syscalls is a resaon 
+of the slow down of the v1 program.
+
+The program can be optimized by reducing the number of syscalls:
+for example, call write() and lseek() only once for each subarray
+and use read() only once in main. 
+
+Lets check this theory by testing such optimized program (v2).
+
+The testing of a hw06 program (v2) gives following results: 
+|v2 = vesion 2 of the hw06 |
+_______________________________________________________________
+ scenario   |1st run(s)|2nd run(s)|3rd run(s)|median(s)|speedup|
+===============================================================
+ 1 thread   |   18.81  |   18.69  |   18.71  |  18.71  |   1   | 
+---------------------------------------------------------------
+ 4 threads  |   9.77   |    9.84  |    9.60  |  9.77   |  1.92 | 
+---------------------------------------------------------------
+ 8 threads  |   6.46   |    5.68  |    6.00  |  6.00   |  3.12 |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+Here we have only 2 syscalls for each trhead and only one read() 
+syscall in main(). It results into much faster program.
+Significant reduction of syscalls also results into a greater
+speedup(as now there are less syscalls, number of threads has
+greater influence on the running time of the program).
+If we compare the timing results of this program with previous
+results, it can be seen that our program is faster than the
+program from hw05 (and definetely faster than v1), but 
+slower than modified the hw05 version with threads and mappings.
+
+(the final tssort implements v2 approach).

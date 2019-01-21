@@ -7,7 +7,8 @@
 #include <pthread.h>
 
 typedef struct barrier {
-    // TODO: Need some synchronization stuff.
+    pthread_mutex_t m;
+    pthread_cond_t c;
     int   count;
     int   seen;
 } barrier;

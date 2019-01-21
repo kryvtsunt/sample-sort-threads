@@ -6,33 +6,32 @@
 #include <errno.h>
 #include <assert.h>
 #include <unistd.h>
-
 #include "barrier.h"
 
-barrier*
+	barrier*
 make_barrier(int nn)
 {
-    barrier* bb = malloc(sizeof(barrier));
-    assert(bb != 0);
-
-    bb->count = -7;  // TODO: These can't be right.
-    bb->seen  = 342;
-    return bb;
+	barrier* bb = malloc(sizeof(barrier));
+	assert(bb != 0);
+	bb->count = nn;  
+	bb->seen  = 0;
+	pthread_mutex_init(&bb->m, NULL);
+	pthread_cond_init(&bb->c, NULL);
+	return bb;
 }
 
-void
+	void
 barrier_wait(barrier* bb)
 {
-    while (1) {
-        sleep(1);
-        // TODO: Stop waiting.
-        // TODO: Don't sleep here.
-    }
+  pthread_mutex_lock(&bb->m);
+  bb->seen++; 
+  while (bb->seen != bb->count) {pthread_cond_wait(&bb->c, &bb->m); }
+  pthread_cond_broadcast(&bb->c);
+  pthread_mutex_unlock(&bb->m);     
 }
-
-void
+	void
 free_barrier(barrier* bb)
 {
-    free(bb);
+	free(bb);
 }
 

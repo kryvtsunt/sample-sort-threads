@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
 #include "float_vec.h"
 
 /*
@@ -18,7 +17,7 @@ floats*
 make_floats(long nn)
 {
     floats* xs = malloc(sizeof(floats));
-    xs->size = nn;
+    xs->size = 0;
     xs->cap  = (nn > 1) ? nn : 2;
     xs->data = malloc(xs->cap * sizeof(float));
     return xs;
